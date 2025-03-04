@@ -1,8 +1,8 @@
 import multiprocessing
-multiprocessing.set_start_method("spawn", force=True)  # Set spawn for CUDA compatibility
+multiprocessing.set_start_method("spawn", force=True)
 
 import os
-os.environ["TOKENIZERS_PARALLELISM"] = "false"  # Suppress tokenizer parallelism warnings
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import json
 import torch
@@ -29,33 +29,39 @@ class TrainingConfigAWS:
     lora_alpha: int = 32
     lora_dropout: float = 0.1
     torch_dtype: torch.dtype = torch.bfloat16
-    num_workers: int = 4
+    num_workers: int = 2
     output_dir: str = f"lex_lora_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     data_dir: str = "transcripts_jsonl"
 
 class CustomDataset(Dataset):
-    """Dataset class for pre-tokenizing text data."""
+    """Dataset class for lazy tokenization of text data."""
     def __init__(self, data, tokenizer: AutoTokenizer, max_length: int):
+        self.data = data
         self.tokenizer = tokenizer
         self.max_length = max_length
-        print(f"Pre-tokenizing {len(data)} examples...")
-        # Tokenize on CPU, don’t move to CUDA yet
-        self.inputs = [
-            tokenizer(
-                item["text"],
-                return_tensors="pt",
-                truncation=True,
-                max_length=max_length,
-                padding="max_length"
-            ) for item in data
-        ]
-        self.inputs = [{k: v.squeeze(0) for k, v in input_dict.items()} for input_dict in self.inputs]
+        print(f"Initialized dataset with {len(data)} examples (lazy loading)")
 
     def __len__(self):
-        return len(self.inputs)
+        return len(self.data)
 
     def __getitem__(self, idx):
-        return self.inputs[idx]
+        item = self.data[idx]
+        tokenized = self.tokenizer(
+            item["text"],
+            return_tensors="pt",
+            truncation=True,
+            max_length=self.max_length,
+            padding="max_length"
+        )
+        return {k: v.squeeze(0) for k, v in tokenized.items()}
+
+def collate_fn(batch):
+    """Collate function to stack tensors and move to CUDA."""
+    device = torch.device("cuda")
+    return {
+        "input_ids": torch.stack([item["input_ids"] for item in batch]).to(device),
+        "attention_mask": torch.stack([item["attention_mask"] for item in batch]).to(device)
+    }
 
 def setup_environment():
     """Set up CUDA environment variables."""
@@ -116,13 +122,6 @@ def create_data_loaders(
         config: TrainingConfigAWS
 ) -> Dict[str, DataLoader]:
     """Create data loaders for each dataset split."""
-    def collate_fn(batch):
-        device = torch.device("cuda")
-        return {
-            "input_ids": torch.stack([item["input_ids"] for item in batch]).to(device),
-            "attention_mask": torch.stack([item["attention_mask"] for item in batch]).to(device)
-        }
-
     loaders = {}
     for split in ["train", "validation", "test"]:
         ds = CustomDataset(dataset[split], tokenizer, config.max_length)
@@ -131,7 +130,7 @@ def create_data_loaders(
             ds,
             batch_size=config.batch_size,
             shuffle=shuffle,
-            collate_fn=collate_fn,
+            collate_fn=collate_fn,  # Use global collate_fn
             num_workers=config.num_workers,
             pin_memory=True
         )
@@ -270,7 +269,7 @@ def main():
             json.dump(results, f, indent=4)
         print(f"Saved results to {results_file}")
 
-        save_checkpoint(model, tokenizer, config, epoch)
+        save_checkpoint(model, Tokenizer, config, epoch)
 
     # Save final model
     print("Saving final model...")
