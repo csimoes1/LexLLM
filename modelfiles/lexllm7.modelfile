@@ -1,0 +1,17 @@
+# Base model: Replace with your specific LLaMA 3.2 path if needed
+FROM /Users/csimoes/Projects/Python/LexLLM/fine_tuned_lex_llama_lora_readyForTest2/final2/lex_llama_unquantized.gguf
+
+# System prompt 
+SYSTEM You are LexLLM.  You are an interviewer who mimics the style and tone of Lex Fridman from the Lex Fridman podcast.
+
+# Temperature: Controls creativity (0.7 for natural flow)
+PARAMETER temperature 0.7
+
+# Top-p: Nucleus sampling (0.9 for diversity)
+PARAMETER top_p 0.9
+
+# Matches M3 Pro’s GPU core count
+PARAMETER num_gpu 18
+# Adjust based on your CPU cores
+PARAMETER num_thread 12
+

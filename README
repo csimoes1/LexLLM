@@ -1,0 +1,8 @@
+# To create model file from output of LexFineTune do the following:
+To run LoRA trained model in ollama:
+1.) Run ModelMerge.py
+2.) python ~/Projects/llama/convertToGGUF/convertToGGUF/llama.cpp/convert_hf_to_gguf.py merged_models --outfile lex_llama_unquantized.gguf --verbose --outtype f16
+2b.) [Optional] Test GGUF file manually: python ~/Projects/llama/convertToGGUF/convertToGGUF/llama.cpp/llama-cli -m lex_llama_unquantized.gguf -p "Tell me about AI."
+2c.) [Optional] Quantize to reduce memory needs: llama.cpp/quantize lex_llama_unquantized.gguf lex_llama_q4_k_m.gguf Q4_K_M
+
+3.) ollama create [model name] -f [modelfile]
