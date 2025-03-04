@@ -108,7 +108,7 @@ def load_data(config: TrainingConfigAWS) -> Dict[str, List[str]]:
 def create_data_loaders(
         dataset: Dict[str, List[str]],
         tokenizer: AutoTokenizer,
-        config: TrainingConfig
+        config: TrainingConfigAWS
 ) -> Dict[str, DataLoader]:
     """Create data loaders for each dataset split."""
     def collate_fn(batch):
