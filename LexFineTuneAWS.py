@@ -131,7 +131,7 @@ def create_data_loaders(
             shuffle=shuffle,
             collate_fn=collate_fn,
             num_workers=config.num_workers,
-            pin_memory=True
+            pin_memory=False
         )
     print("Data loaders created")
     return loaders
