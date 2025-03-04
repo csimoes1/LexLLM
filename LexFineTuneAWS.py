@@ -56,11 +56,10 @@ class CustomDataset(Dataset):
         return {k: v.squeeze(0) for k, v in tokenized.items()}
 
 def collate_fn(batch):
-    """Collate function to stack tensors and move to CUDA."""
-    device = torch.device("cuda")
+    """Collate function to stack tensors (kept on CPU)."""
     return {
-        "input_ids": torch.stack([item["input_ids"] for item in batch]).to(device),
-        "attention_mask": torch.stack([item["attention_mask"] for item in batch]).to(device)
+        "input_ids": torch.stack([item["input_ids"] for item in batch]),
+        "attention_mask": torch.stack([item["attention_mask"] for item in batch])
     }
 
 def setup_environment():
@@ -130,7 +129,7 @@ def create_data_loaders(
             ds,
             batch_size=config.batch_size,
             shuffle=shuffle,
-            collate_fn=collate_fn,  # Use global collate_fn
+            collate_fn=collate_fn,
             num_workers=config.num_workers,
             pin_memory=True
         )
@@ -150,8 +149,11 @@ def train_epoch(
     optimizer.zero_grad()
 
     print(f"Epoch {epoch+1}/{config.epochs} - Training")
+    device = torch.device("cuda")
     for batch_idx, batch in enumerate(loader):
         print(f"{datetime.now()} Training batch {batch_idx+1}/{len(loader)}")
+        # Move batch to CUDA after pinning
+        batch = {k: v.to(device) for k, v in batch.items()}
         with autocast(device_type="cuda", dtype=config.torch_dtype):
             outputs = model(**batch, labels=batch["input_ids"])
             loss = outputs.loss / config.accumulation_steps
@@ -190,9 +192,12 @@ def evaluate_epoch(
     total_loss = 0
 
     print(f"Epoch {epoch+1}/{config.epochs} - {phase.capitalize()}")
+    device = torch.device("cuda")
     with torch.no_grad():
         for batch_idx, batch in enumerate(loader):
             print(f"{datetime.now()} {phase.capitalize()} batch {batch_idx+1}/{len(loader)}")
+            # Move batch to CUDA after pinning
+            batch = {k: v.to(device) for k, v in batch.items()}
             with autocast(device_type="cuda", dtype=config.torch_dtype):
                 outputs = model(**batch, labels=batch["input_ids"])
                 loss = outputs.loss
@@ -269,7 +274,7 @@ def main():
             json.dump(results, f, indent=4)
         print(f"Saved results to {results_file}")
 
-        save_checkpoint(model, Tokenizer, config, epoch)
+        save_checkpoint(model, tokenizer, config, epoch)
 
     # Save final model
     print("Saving final model...")
