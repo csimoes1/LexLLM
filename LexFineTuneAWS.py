@@ -21,10 +21,10 @@ class TrainingConfigAWS:
     """Configuration for training parameters."""
     model_id: str = "meta-llama/Llama-3.2-3B-Instruct"
     learning_rate: float = 5e-4
-    accumulation_steps: int = 2
+    accumulation_steps: int = 4
     epochs: int = 3
     max_length: int = 256
-    batch_size: int = 16
+    batch_size: int = 8
     lora_r: int = 16
     lora_alpha: int = 32
     lora_dropout: float = 0.1
@@ -65,7 +65,7 @@ def collate_fn(batch):
 def setup_environment():
     """Set up CUDA environment variables."""
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128,expandable_segments:True"
 
 def load_model_and_tokenizer(config: TrainingConfigAWS) -> tuple[AutoModelForCausalLM, AutoTokenizer]:
     """Load the model and tokenizer with LoRA configuration."""
