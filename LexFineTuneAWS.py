@@ -24,7 +24,7 @@ class TrainingConfigAWS:
     lora_alpha: int = 32
     lora_dropout: float = 0.1
     torch_dtype: torch.dtype = torch.bfloat16
-    num_workers: int = 8
+    num_workers: int = 4
     output_dir: str = f"lex_lora_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     data_dir: str = "transcripts_jsonl"
 
@@ -34,6 +34,7 @@ class CustomDataset(Dataset):
         self.tokenizer = tokenizer
         self.max_length = max_length
         print(f"Pre-tokenizing {len(data)} examples...")
+        # Tokenize on CPU, don’t move to CUDA yet
         self.inputs = [
             tokenizer(
                 item["text"],
@@ -41,7 +42,7 @@ class CustomDataset(Dataset):
                 truncation=True,
                 max_length=max_length,
                 padding="max_length"
-            ).to(torch.device("cuda")) for item in data
+            ) for item in data
         ]
         self.inputs = [{k: v.squeeze(0) for k, v in input_dict.items()} for input_dict in self.inputs]
 
@@ -107,13 +108,14 @@ def load_data(config: TrainingConfigAWS) -> Dict[str, List[str]]:
 def create_data_loaders(
         dataset: Dict[str, List[str]],
         tokenizer: AutoTokenizer,
-        config: TrainingConfigAWS
+        config: TrainingConfig
 ) -> Dict[str, DataLoader]:
     """Create data loaders for each dataset split."""
     def collate_fn(batch):
+        device = torch.device("cuda")
         return {
-            "input_ids": torch.stack([item["input_ids"] for item in batch]),
-            "attention_mask": torch.stack([item["attention_mask"] for item in batch])
+            "input_ids": torch.stack([item["input_ids"] for item in batch]).to(device),
+            "attention_mask": torch.stack([item["attention_mask"] for item in batch]).to(device)
         }
 
     loaders = {}

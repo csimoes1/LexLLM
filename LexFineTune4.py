@@ -8,7 +8,7 @@ from torch.amp import autocast
 import os
 import wandb
 import json  # For saving results to a file
-# comment added
+
 #get datetime string for use in filenames
 datetime_str = datetime.now().strftime("%Y%m%d_%H%M%S")
 

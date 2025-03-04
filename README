@@ -6,3 +6,8 @@ To run LoRA trained model in ollama:
 2c.) [Optional] Quantize to reduce memory needs: llama.cpp/quantize lex_llama_unquantized.gguf lex_llama_q4_k_m.gguf Q4_K_M
 
 3.) ollama create [model name] -f [modelfile]
+
+
+# To watch performance of AWS machine
+nvidia-smi  # Check GPU usage
+htop        # Check CPU usage (should see 16 threads)
