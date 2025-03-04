@@ -1,4 +1,9 @@
+import multiprocessing
+multiprocessing.set_start_method("spawn", force=True)  # Set spawn for CUDA compatibility
+
 import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"  # Suppress tokenizer parallelism warnings
+
 import json
 import torch
 from datetime import datetime
