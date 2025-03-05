@@ -11,3 +11,6 @@ To run LoRA trained model in ollama:
 # To watch performance of AWS machine
 nvidia-smi  # Check GPU usage
 htop        # Check CPU usage (should see 16 threads)
+
+# NVidia GPU usage:
+nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total --format=csv -l 5

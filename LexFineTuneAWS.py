@@ -22,7 +22,7 @@ class TrainingConfigAWS:
     model_id: str = "meta-llama/Llama-3.2-3B-Instruct"
     learning_rate: float = 5e-4
     accumulation_steps: int = 4
-    epochs: int = 3
+    epochs: int = 5
     max_length: int = 256
     batch_size: int = 8
     lora_r: int = 16
