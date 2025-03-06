@@ -21,13 +21,13 @@ class TrainingConfigAWS:
     """Configuration for training parameters."""
     model_id: str = "meta-llama/Llama-3.2-3B-Instruct"
     learning_rate: float = 5e-4
-    accumulation_steps: int = 4
+    accumulation_steps: int = 2
     epochs: int = 10  # Increased from 5 to 10
     max_length: int = 256
-    batch_size: int = 8
+    batch_size: int = 12
     lora_r: int = 16
     lora_alpha: int = 32
-    lora_dropout: float = 0.1
+    lora_dropout: float = 0.2
     torch_dtype: torch.dtype = torch.bfloat16
     num_workers: int = 2
     output_dir: str = f"lex_lora_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
