@@ -21,10 +21,10 @@ class TrainingConfigAWS:
     """Configuration for training parameters."""
     model_id: str = "meta-llama/Llama-3.2-3B-Instruct"
     learning_rate: float = 5e-4
-    accumulation_steps: int = 2
+    accumulation_steps: int = 4
     epochs: int = 10  # Increased from 5 to 10
     max_length: int = 256
-    batch_size: int = 12
+    batch_size: int = 10
     lora_r: int = 16
     lora_alpha: int = 32
     lora_dropout: float = 0.2
