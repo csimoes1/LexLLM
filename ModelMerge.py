@@ -5,9 +5,9 @@ import os
 
 # Paths
 base_model_id = "meta-llama/Llama-3.2-3B-Instruct"
-working_dir = "fine_tuned_lex_llama_lora_readyForTest2/final2"
+working_dir = "/Users/csimoes/Projects/llama/final_Mar052024"
 lora_model_path = working_dir
-merged_model_path = working_dir+"/merged_models"
+merged_model_path = working_dir
 
 # Load base model
 base_model = AutoModelForCausalLM.from_pretrained(

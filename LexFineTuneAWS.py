@@ -22,7 +22,7 @@ class TrainingConfigAWS:
     model_id: str = "meta-llama/Llama-3.2-3B-Instruct"
     learning_rate: float = 5e-4
     accumulation_steps: int = 4
-    epochs: int = 5
+    epochs: int = 10  # Increased from 5 to 10
     max_length: int = 256
     batch_size: int = 8
     lora_r: int = 16
@@ -32,6 +32,7 @@ class TrainingConfigAWS:
     num_workers: int = 2
     output_dir: str = f"lex_lora_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     data_dir: str = "transcripts_jsonl"
+    patience: int = 2  # New: Number of epochs to wait for val loss improvement
 
 class CustomDataset(Dataset):
     """Dataset class for lazy tokenization of text data."""
@@ -152,7 +153,6 @@ def train_epoch(
     device = torch.device("cuda")
     for batch_idx, batch in enumerate(loader):
         print(f"{datetime.now()} Training batch {batch_idx+1}/{len(loader)}")
-        # Move batch to CUDA after pinning
         batch = {k: v.to(device) for k, v in batch.items()}
         with autocast(device_type="cuda", dtype=config.torch_dtype):
             outputs = model(**batch, labels=batch["input_ids"])
@@ -196,7 +196,6 @@ def evaluate_epoch(
     with torch.no_grad():
         for batch_idx, batch in enumerate(loader):
             print(f"{datetime.now()} {phase.capitalize()} batch {batch_idx+1}/{len(loader)}")
-            # Move batch to CUDA after pinning
             batch = {k: v.to(device) for k, v in batch.items()}
             with autocast(device_type="cuda", dtype=config.torch_dtype):
                 outputs = model(**batch, labels=batch["input_ids"])
@@ -225,7 +224,7 @@ def save_checkpoint(
     print(f"Saved model to {checkpoint_dir}")
 
 def main():
-    """Main training loop."""
+    """Main training loop with early stopping."""
     config = TrainingConfigAWS()
     setup_environment()
 
@@ -242,6 +241,11 @@ def main():
     os.makedirs(config.output_dir, exist_ok=True)
     results_file = os.path.join(config.output_dir, "training_results.json")
     results = {"epochs": []}
+
+    # Early stopping variables
+    best_val_loss = float('inf')
+    patience_counter = 0
+    best_epoch = 0
 
     print("Starting training...")
     for epoch in range(config.epochs):
@@ -270,18 +274,35 @@ def main():
             "epoch": epoch + 1
         })
 
+        # Early stopping logic
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            best_epoch = epoch + 1
+            patience_counter = 0
+            # Save the best model checkpoint
+            save_checkpoint(model, tokenizer, config, epoch)
+            print(f"New best validation loss: {best_val_loss:.4f}, checkpoint saved.")
+        else:
+            patience_counter += 1
+            print(f"Validation loss did not improve. Patience counter: {patience_counter}/{config.patience}")
+            save_checkpoint(model, tokenizer, config, epoch)  # Still save per epoch for reference
+
+        if patience_counter >= config.patience:
+            print(f"Early stopping triggered after {patience_counter} epochs without improvement.")
+            print(f"Best validation loss: {best_val_loss:.4f} at Epoch {best_epoch}")
+            break
+
         with open(results_file, "w") as f:
             json.dump(results, f, indent=4)
         print(f"Saved results to {results_file}")
 
-        save_checkpoint(model, tokenizer, config, epoch)
-
-    # Save final model
-    print("Saving final model...")
-    save_checkpoint(model, tokenizer, config)
+    # Save final model (if not stopped early)
+    if patience_counter < config.patience:
+        print("Saving final model...")
+        save_checkpoint(model, tokenizer, config)
 
     artifact = wandb.Artifact("fine_tuned_lex_llama_lora_AWS", type="model")
-    artifact.add_dir(os.path.join(config.output_dir, "final"))
+    artifact.add_dir(os.path.join(config.output_dir, f"checkpoint_epoch_{best_epoch}"))  # Use best checkpoint
     wandb.log_artifact(artifact)
 
     print(f"Final Time: {datetime.now()}")
