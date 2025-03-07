@@ -27,7 +27,7 @@ class TrainingConfigAWS:
     learning_rate: float = 0.0002 # 5e-4
     accumulation_steps: int = 4
     epochs: int = 10  # Increased from 5 to 10
-    max_length: int = 512
+    max_length: int = 256
     batch_size: int = 10
     lora_r: int = 16
     lora_alpha: int = 16 # often set to (2 * lora_r)
@@ -37,7 +37,7 @@ class TrainingConfigAWS:
     output_dir: str = f"lex_lora_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     data_dir: str = "transcripts_jsonl"
     patience: int = 2  # New: Number of epochs to wait for val loss improvement
-    test_mode: bool = True
+    test_mode: bool = False
 
 class CustomDataset(Dataset):
     def __init__(self, data, tokenizer: AutoTokenizer, max_length: int):
