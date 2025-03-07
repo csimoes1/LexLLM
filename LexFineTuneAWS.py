@@ -1,4 +1,7 @@
 import multiprocessing
+
+from sympy import false
+
 multiprocessing.set_start_method("spawn", force=True)
 
 import os
@@ -33,6 +36,7 @@ class TrainingConfigAWS:
     output_dir: str = f"lex_lora_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     data_dir: str = "transcripts_jsonl"
     patience: int = 2  # New: Number of epochs to wait for val loss improvement
+    test_mode: bool = True
 
 class CustomDataset(Dataset):
     """Dataset class for lazy tokenization of text data."""
@@ -104,7 +108,11 @@ def load_data(config: TrainingConfigAWS) -> Dict[str, List[str]]:
             if f.startswith(prefix) and f.endswith(suffix)
         ]
         files.sort(key=lambda x: int(x.split("_")[-1].split(".")[0]))
-        return files
+
+        if config.test_mode:
+            return [files[0]]  # return just the first value of files as a List[str]
+        else:
+            return files
 
     print("Loading datasets...")
     data_files = {
