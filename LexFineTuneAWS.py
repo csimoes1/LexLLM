@@ -23,7 +23,7 @@ class TrainingConfigAWS:
     learning_rate: float = 0.0002 # 5e-4
     accumulation_steps: int = 4
     epochs: int = 10  # Increased from 5 to 10
-    max_length: int = 256
+    max_length: int = 512
     batch_size: int = 10
     lora_r: int = 16
     lora_alpha: int = 16 # often set to (2 * lora_r)
