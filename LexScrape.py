@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import json
 import os
 
-from LexTranscriptProcessor2 import LexTranscriptProcessor2
+from LexTranscriptProcessor import LexTranscriptProcessor
 
 '''
 Our MAIN class to scrape the Lex Fridman podcast transcripts and turn them into training, validation and test data.
@@ -131,7 +131,7 @@ if __name__ == "__main__":
         filename = ""
         for episode_data in episodes_with_transcripts:
             print(f"\nProcessing episode: {episode_data['episode_title']}")
-            processor = LexTranscriptProcessor2(episode_number=episode_number, episode_url=episode_data['transcript_url'])
+            processor = LexTranscriptProcessor(episode_number=episode_number, episode_url=episode_data['transcript_url'])
             pairedOutput = processor.process_transcript()
             print(f"Transcript text for episode {episode_number} complete")
 
