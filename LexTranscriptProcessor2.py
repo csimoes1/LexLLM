@@ -74,9 +74,7 @@ class LexTranscriptProcessor2:
                 previous_name_lex = self.is_lex_fridman(data['name'])
                 # if Lex is first to talk, put in blank user record
                 if self.is_lex_fridman(data['name']):
-                    self.training_data.append("<|begin_of_text|>")
-                    self.training_data.append("<|start_header_id|>user<|end_header_id|>")
-                    self.training_data.append("<|eot_id|>")
+                    self.training_data.append("<|begin_of_text|><|start_header_id|>user<|end_header_id|><|introduction|><|eot_id|>")
 
             else:
                 # once we have a previous_name_lex wait until name changes and then output the previous_text
@@ -125,7 +123,7 @@ class LexTranscriptProcessor2:
 
 # main program
 if __name__ == "__main__":
-    processor = LexTranscriptProcessor2(episode_number=1, episode_url='https://lexfridman.com/cursor-team-transcript')
+    processor = LexTranscriptProcessor2(episode_number=999, episode_url='https://lexfridman.com/deepseek-dylan-patel-nathan-lambert-transcript')
     pairedOutput = processor.process_transcript()
 
     for line in pairedOutput:
