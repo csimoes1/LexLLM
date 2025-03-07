@@ -1,6 +1,7 @@
 import multiprocessing
 
 from sympy import false
+from transformers.tokenization_utils_base import TruncationStrategy
 
 multiprocessing.set_start_method("spawn", force=True)
 
@@ -39,7 +40,6 @@ class TrainingConfigAWS:
     test_mode: bool = True
 
 class CustomDataset(Dataset):
-    """Dataset class for lazy tokenization of text data."""
     def __init__(self, data, tokenizer: AutoTokenizer, max_length: int):
         self.data = data
         self.tokenizer = tokenizer
@@ -50,15 +50,34 @@ class CustomDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        item = self.data[idx]
+        item = self.data[idx]["text"]
+        # Split at first <|eot_id|> (assuming one user-assistant pair)
+        parts = item.split("<|eot_id|>", 1)
+        user_text = parts[0] + "<|eot_id|>"  # Keep <|eot_id|> with user
+        assistant_text = parts[1] if len(parts) > 1 else ""
+
         tokenized = self.tokenizer(
-            item["text"],
+            user_text,
+            assistant_text,
             return_tensors="pt",
-            truncation=True,
+            truncation=TruncationStrategy.ONLY_FIRST,  # Prioritize assistant, truncate user if needed
             max_length=self.max_length,
             padding="max_length"
         )
         return {k: v.squeeze(0) for k, v in tokenized.items()}
+
+# class CustomDataset_OLD(Dataset):
+#     def __getitem__(self, idx):
+#         item = self.data[idx]
+#         tokenized = self.tokenizer(
+#             item["text"],
+#             return_tensors="pt",
+#             # truncation=True,
+#             truncation=TruncationStrategy.ONLY_FIRST,
+#             max_length=self.max_length,
+#             padding="max_length"
+#         )
+#         return {k: v.squeeze(0) for k, v in tokenized.items()}
 
 def collate_fn(batch):
     """Collate function to stack tensors (kept on CPU)."""

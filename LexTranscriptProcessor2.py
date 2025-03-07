@@ -85,7 +85,7 @@ class LexTranscriptProcessor2:
                         self.training_data.append(f"<|start_header_id|>assistant<|end_header_id|>{previous_text}<|eot_id|>")
                     else:
                         # for user just use the last 15 words of the previous text
-                        previous_text = ' '.join(previous_text.split()[-25:])
+                        previous_text = ' '.join(previous_text.split()[-100:])
                         self.training_data.append(f"<|begin_of_text|><|start_header_id|>user<|end_header_id|>{previous_text}<|eot_id|>")
 
                     # reset previous_text and previous_name_lex
