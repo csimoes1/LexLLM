@@ -1,0 +1,2 @@
+transcripts_jsonl/*.jsonl linguist-detectable=false
+modelfiles/*.modelfiles linguist-detectable=false

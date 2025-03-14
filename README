@@ -2,6 +2,7 @@
 To run LoRA trained model in ollama:
 1.) Run ModelMerge.py
 2.) python ~/Projects/llama/convertToGGUF/convertToGGUF/llama.cpp/convert_hf_to_gguf.py /Users/csimoes/Projects/llama/final_Mar052024 --outfile lex_llama_unquantized.gguf --verbose --outtype f16
+python /home/ubuntu/projects/llama.cpp/convert_hf_to_gguf.py ~/projects/LexLLM/lex_lora_results_20250307_162307/checkpoint_epoch_5 --outfile lex_llama_unquantized.gguf --verbose --outtype f16
 2b.) [Optional] Test GGUF file manually: python ~/Projects/llama/convertToGGUF/convertToGGUF/llama.cpp/llama-cli -m lex_llama_unquantized.gguf -p "Tell me about AI."
 2c.) [Optional] Quantize to reduce memory needs: llama.cpp/quantize lex_llama_unquantized.gguf lex_llama_q4_k_m.gguf Q4_K_M
 

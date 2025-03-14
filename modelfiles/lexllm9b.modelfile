@@ -1,0 +1,11 @@
+# Base model: Replace with your specific LLaMA 3.2 path if needed
+FROM /Users/csimoes/Projects/llama/createdModels/LexLLM_Mar102025_1024am/lex_llama_unquantized.gguf
+
+# System prompt 
+SYSTEM Your name is LexLLM.  You are trying to mimic the tone and style of Lex Fridman.  You interview guests about their work and life experiences.  Keep the conversation in the tone and style of Lex Fridman.  Only ask me 1 question at a time.
+
+# Matches M3 Pro’s GPU core count
+PARAMETER num_gpu 18
+# Adjust based on your CPU cores
+PARAMETER num_thread 12
+

@@ -38,6 +38,7 @@ class TrainingConfigAWS:
     data_dir: str = "transcripts_jsonl"
     patience: int = 2  # New: Number of epochs to wait for val loss improvement
     test_mode: bool = False
+    target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
 
 class CustomDataset(Dataset):
     def __init__(self, data, tokenizer: AutoTokenizer, max_length: int):
@@ -107,7 +108,7 @@ def load_model_and_tokenizer(config: TrainingConfigAWS) -> tuple[AutoModelForCau
     lora_config = LoraConfig(
         r=config.lora_r,
         lora_alpha=config.lora_alpha,
-        target_modules=["q_proj", "k_proj"],
+        target_modules=config.target_modules,
         lora_dropout=config.lora_dropout,
         bias="none",
         task_type="CAUSAL_LM"
@@ -164,6 +165,38 @@ def create_data_loaders(
     print("Data loaders created")
     return loaders
 
+def create_assistant_mask(input_ids, tokenizer):
+    """
+    Create a mask that identifies which tokens belong to the assistant (Lex) responses.
+
+    Args:
+        input_ids: Batch of token IDs [batch_size, seq_len]
+        tokenizer: The tokenizer used
+
+    Returns:
+        A boolean tensor of shape [batch_size, seq_len] where True indicates assistant tokens
+    """
+    batch_size, seq_len = input_ids.shape
+    assistant_mask = torch.zeros_like(input_ids).bool()
+
+    # Identify tokens that mark the beginning of assistant responses
+    # For Llama models, you'd use the assistant token ID
+    assistant_token_id = tokenizer.convert_tokens_to_ids(["<|start_header_id|>assistant<|end_header_id|>"])[0]
+    eot_token_id = tokenizer.convert_tokens_to_ids(["<|eot_id|>"])[0]
+
+    for b in range(batch_size):
+        is_assistant = False
+        for t in range(seq_len):
+            if input_ids[b, t] == assistant_token_id:
+                is_assistant = True
+            elif input_ids[b, t] == eot_token_id:
+                is_assistant = False
+
+            if is_assistant:
+                assistant_mask[b, t] = True
+
+    return assistant_mask
+
 def train_epoch(
         model: AutoModelForCausalLM,
         loader: DataLoader,
@@ -181,9 +214,30 @@ def train_epoch(
     for batch_idx, batch in enumerate(loader):
         print(f"{datetime.now()} Training batch {batch_idx+1}/{len(loader)}")
         batch = {k: v.to(device) for k, v in batch.items()}
+
+        # Find the assistant tokens in each sequence
+        assistant_mask = create_assistant_mask(batch["input_ids"], tokenizer)
+
         with autocast(device_type="cuda", dtype=config.torch_dtype):
             outputs = model(**batch, labels=batch["input_ids"])
-            loss = outputs.loss / config.accumulation_steps
+
+            # Apply loss mask to only consider assistant tokens
+            # Get the per-token loss (before reduction)
+            shift_logits = outputs.logits[..., :-1, :].contiguous()
+            shift_labels = batch["input_ids"][..., 1:].contiguous()
+            # Shift the assistant mask to align with shifted logits/labels
+            shift_assistant_mask = assistant_mask[..., 1:].contiguous()
+
+            # Calculate loss only on assistant tokens
+            loss_fct = torch.nn.CrossEntropyLoss(reduction='none')
+            losses = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+            # Reshape losses to match the original batch shape
+            losses = losses.view(shift_labels.shape)
+            # Apply the assistant mask to zero out non-assistant token losses
+            masked_losses = losses * shift_assistant_mask
+            # Take mean of non-zero elements
+            loss = masked_losses.sum() / (shift_assistant_mask.sum() + 1e-8)
+            # loss = loss / config.accumulation_steps
         loss.backward()
 
         if (batch_idx + 1) % config.accumulation_steps == 0:
